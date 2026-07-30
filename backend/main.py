@@ -151,6 +151,9 @@ def calculate_google_route(request: GoogleRouteRequest):
     and returns parsed landmark steps and path coordinates.
     """
     try:
+        # Reload environment variables to pick up any key updates
+        load_dotenv(override=True)
+        
         service = GoogleDirectionsService(api_key=request.google_api_key)
         google_result = service.get_google_walking_route(
             origin=request.start_location,

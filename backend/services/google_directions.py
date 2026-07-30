@@ -10,7 +10,8 @@ class GoogleDirectionsService:
     """
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
+        raw_key = api_key or os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        self.api_key = raw_key.strip().strip('"').strip("'") if raw_key else ""
         self.gmaps_client = None
         if self.api_key:
             try:
@@ -28,24 +29,35 @@ class GoogleDirectionsService:
         """
         Requests Google Maps Walking Directions and returns parsed maneuvers + coordinates.
         """
-        key_to_use = custom_key or self.api_key
+        raw_key = custom_key or self.api_key
+        key_to_use = raw_key.strip().strip('"').strip("'") if raw_key else ""
+        
         if not key_to_use:
-            raise ValueError("Google Maps API Key is required. Please set GOOGLE_MAPS_API_KEY environment variable or provide your API key.")
+            raise ValueError("Google Maps API Key is required. Please set GOOGLE_MAPS_API_KEY in .env file.")
             
         client = self.gmaps_client
         if custom_key or not client:
             client = googlemaps.Client(key=key_to_use)
 
-        # Call Google Directions API for walking mode
-        directions_result = client.directions(
-            origin=origin,
-            destination=destination,
-            mode="walking",
-            units="metric"
-        )
+        try:
+            # Call Google Directions API for walking mode
+            directions_result = client.directions(
+                origin=origin,
+                destination=destination,
+                mode="walking",
+                units="metric"
+            )
+        except Exception as err:
+            err_msg = str(err)
+            if "REQUEST_DENIED" in err_msg:
+                raise ValueError("Google Maps API Request Denied. Please ensure 'Directions API' is enabled in your Google Cloud Console for this key.")
+            elif "INVALID_REQUEST" in err_msg:
+                raise ValueError(f"Invalid Google Maps location request between '{origin}' and '{destination}'.")
+            else:
+                raise ValueError(f"Google Directions API error: {err_msg}")
 
         if not directions_result:
-            raise ValueError(f"No Google walking route found between '{origin}' and '{destination}'.")
+            raise ValueError(f"No walking route found on Google Maps between '{origin}' and '{destination}'.")
 
         route = directions_result[0]
         leg = route["legs"][0]
@@ -71,7 +83,7 @@ class GoogleDirectionsService:
             dist_m = step["distance"]["value"]
             maneuver = step.get("maneuver", "straight")
             
-            # Query nearby Google Places landmarks
+            # Query nearby Google Places landmarks safely
             landmark_name = None
             try:
                 places_res = client.places_nearby(
