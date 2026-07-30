@@ -6,7 +6,7 @@
 
 ## 1. System Overview
 
-**Vision X** is a landmark-oriented, message-based route navigation panel custom-built for **Chhatrapati Shahuji Maharaj University (CSJMU), Kanpur**. Given a user's starting point and final destination across the CSJMU campus, it calculates the shortest spatial path, analyzes turn maneuver angles, matches campus visual landmarks, and formats directions into intuitive human messages (e.g., *"Walk 310m till Administrative Building (VC Secretariat) and then take a left turn there towards Central Library"*).
+**Vision X** is a landmark-oriented, message-based route navigation panel powered primarily by **Google Maps API** (Directions API, Places API, Geocoding API). Given a user's starting point and final destination across CSJMU Kanpur or any global location, it calculates the Google walking path, analyzes turn maneuver angles, snaps nearby physical visual landmarks, and formats directions into intuitive human messages (e.g., *"Walk 200m towards Administrative Building and then take a left turn there"*).
 
 ### Data & Execution Flow
 ```

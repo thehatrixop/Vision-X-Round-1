@@ -17,7 +17,7 @@ const TILE_STYLES = {
     satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 };
 
-let currentEngineMode = 'csjmu'; // 'csjmu' or 'google'
+let currentEngineMode = 'google'; // Default: 'google' or 'csjmu'
 
 /** Switch between CSJMU Mode and Google Maps API Mode */
 function switchEngineMode(mode) {
