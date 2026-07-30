@@ -41,6 +41,7 @@
 ```
 vision_x/
 ├── .env                                  # Environment configuration (GOOGLE_MAPS_API_KEY, CEREBRAS_API_KEY)
+├── vercel.json                           # Vercel serverless deployment routing configuration
 ├── brain.md                              # Master AI index & architecture specification
 ├── requirements.txt                      # Python dependencies (FastAPI, NetworkX, Geopy, Googlemaps, Cerebras)
 ├── route_landmark_navigation_draft.md    # Initial design draft
