@@ -1,0 +1,105 @@
+{
+  "university": "Chhatrapati Shahuji Maharaj University (CSJMU), Kanpur",
+  "landmarks": [
+    {
+      "id": "lm_main_gate",
+      "name": "Main Entrance Gate No. 1 (GT Road)",
+      "category": "Gate",
+      "lat": 26.4962,
+      "lon": 80.2665,
+      "nearest_node": "node_main_gate",
+      "visibility_radius_m": 50.0,
+      "description": "Grand main entrance gate of CSJM University on Kalyanpur GT Road"
+    },
+    {
+      "id": "lm_admin",
+      "name": "Administrative Building (VC Secretariat)",
+      "category": "Administrative",
+      "lat": 26.4981,
+      "lon": 80.2682,
+      "nearest_node": "node_admin_block",
+      "visibility_radius_m": 60.0,
+      "description": "Central administrative block housing Vice Chancellor Secretariat & Administrative offices"
+    },
+    {
+      "id": "lm_library",
+      "name": "Central Library Building",
+      "category": "Library",
+      "lat": 26.4989,
+      "lon": 80.2693,
+      "nearest_node": "node_central_library",
+      "visibility_radius_m": 50.0,
+      "description": "Chhatrapati Shahuji Maharaj Central Library facing the central academic lawn"
+    },
+    {
+      "id": "lm_uiet",
+      "name": "UIET Engineering & Technology Block",
+      "category": "Academic",
+      "lat": 26.5001,
+      "lon": 80.2676,
+      "nearest_node": "node_uiet",
+      "visibility_radius_m": 55.0,
+      "description": "University Institute of Engineering and Technology (UIET) building complex"
+    },
+    {
+      "id": "lm_auditorium",
+      "name": "CSJMU Main Auditorium",
+      "category": "Event",
+      "lat": 26.4977,
+      "lon": 80.2704,
+      "nearest_node": "node_auditorium",
+      "visibility_radius_m": 65.0,
+      "description": "University Grand Jubilee Auditorium and Convocation Hall"
+    },
+    {
+      "id": "lm_canteen",
+      "name": "Central Canteen & Student Shopping Complex",
+      "category": "Dining",
+      "lat": 26.4990,
+      "lon": 80.2709,
+      "nearest_node": "node_canteen",
+      "visibility_radius_m": 45.0,
+      "description": "Central student canteen, food stalls, stationery, and bank ATMs"
+    },
+    {
+      "id": "lm_incubation",
+      "name": "Incubation & Robotics Center",
+      "category": "Research",
+      "lat": 26.5006,
+      "lon": 80.2689,
+      "nearest_node": "node_incubation_center",
+      "visibility_radius_m": 40.0,
+      "description": "Chhatrapati Shahuji Maharaj Innovation Hub and Startup Incubation Center"
+    },
+    {
+      "id": "lm_sports",
+      "name": "CSJMU Sports Stadium & Athletic Complex",
+      "category": "Sports",
+      "lat": 26.4969,
+      "lon": 80.2720,
+      "nearest_node": "node_sports_stadium",
+      "visibility_radius_m": 70.0,
+      "description": "University Sports Stadium, athletic track, and indoor sports hall"
+    },
+    {
+      "id": "lm_hostel",
+      "name": "Shivaji Boys Hostel",
+      "category": "Residential",
+      "lat": 26.5016,
+      "lon": 80.2701,
+      "nearest_node": "node_boys_hostel",
+      "visibility_radius_m": 50.0,
+      "description": "Residential boys hostel block in the northern residential sector"
+    },
+    {
+      "id": "lm_pharmacy",
+      "name": "Department of Pharmacy & Life Sciences",
+      "category": "Academic",
+      "lat": 26.4996,
+      "lon": 80.2667,
+      "nearest_node": "node_pharmacy_dept",
+      "visibility_radius_m": 45.0,
+      "description": "Department of Pharmaceutical Sciences and Life Sciences laboratories"
+    }
+  ]
+}

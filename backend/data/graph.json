@@ -1,0 +1,31 @@
+{
+  "university": "Chhatrapati Shahuji Maharaj University (CSJMU), Kanpur",
+  "center": { "lat": 26.4988, "lon": 80.2690 },
+  "nodes": [
+    { "id": "node_main_gate", "name": "Main Gate No. 1 (GT Road)", "lat": 26.4962, "lon": 80.2665 },
+    { "id": "node_admin_block", "name": "Administrative Building (VC Secretariat)", "lat": 26.4981, "lon": 80.2682 },
+    { "id": "node_central_library", "name": "Central Library", "lat": 26.4989, "lon": 80.2693 },
+    { "id": "node_uiet", "name": "UIET Engineering & Technology Building", "lat": 26.5001, "lon": 80.2676 },
+    { "id": "node_auditorium", "name": "CSJMU Grand Auditorium", "lat": 26.4977, "lon": 80.2704 },
+    { "id": "node_canteen", "name": "Student Canteen & Shopping Complex", "lat": 26.4990, "lon": 80.2709 },
+    { "id": "node_incubation_center", "name": "Startup Incubation & IT Center", "lat": 26.5006, "lon": 80.2689 },
+    { "id": "node_sports_stadium", "name": "University Sports Stadium & Complex", "lat": 26.4969, "lon": 80.2720 },
+    { "id": "node_boys_hostel", "name": "Shivaji Boys Hostel Complex", "lat": 26.5016, "lon": 80.2701 },
+    { "id": "node_pharmacy_dept", "name": "Department of Pharmacy & Life Sciences", "lat": 26.4996, "lon": 80.2667 }
+  ],
+  "edges": [
+    { "source": "node_main_gate", "target": "node_admin_block", "distance_m": 275.0, "path_type": "main_avenue" },
+    { "source": "node_main_gate", "target": "node_sports_stadium", "distance_m": 560.0, "path_type": "outer_ring_road" },
+    { "source": "node_admin_block", "target": "node_central_library", "distance_m": 140.0, "path_type": "central_walkway" },
+    { "source": "node_admin_block", "target": "node_auditorium", "distance_m": 230.0, "path_type": "main_avenue" },
+    { "source": "node_admin_block", "target": "node_pharmacy_dept", "distance_m": 220.0, "path_type": "side_avenue" },
+    { "source": "node_central_library", "target": "node_uiet", "distance_m": 215.0, "path_type": "academic_pathway" },
+    { "source": "node_central_library", "target": "node_canteen", "distance_m": 165.0, "path_type": "central_walkway" },
+    { "source": "node_uiet", "target": "node_incubation_center", "distance_m": 145.0, "path_type": "academic_pathway" },
+    { "source": "node_uiet", "target": "node_pharmacy_dept", "distance_m": 110.0, "path_type": "academic_pathway" },
+    { "source": "node_incubation_center", "target": "node_boys_hostel", "distance_m": 160.0, "path_type": "hostel_road" },
+    { "source": "node_canteen", "target": "node_auditorium", "distance_m": 155.0, "path_type": "side_avenue" },
+    { "source": "node_canteen", "target": "node_boys_hostel", "distance_m": 290.0, "path_type": "hostel_road" },
+    { "source": "node_auditorium", "target": "node_sports_stadium", "distance_m": 185.0, "path_type": "sports_lane" }
+  ]
+}
