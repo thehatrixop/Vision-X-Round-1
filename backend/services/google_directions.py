@@ -49,7 +49,9 @@ class GoogleDirectionsService:
             )
         except Exception as err:
             err_msg = str(err)
-            if "REQUEST_DENIED" in err_msg:
+            if "NameResolutionError" in err_msg or "Failed to resolve" in err_msg or "Max retries exceeded" in err_msg or "getaddrinfo failed" in err_msg:
+                raise ValueError("Internet Connection / DNS Error: Unable to reach maps.googleapis.com. Please check your internet connection or switch to CSJMU Landmarks mode.")
+            elif "REQUEST_DENIED" in err_msg:
                 raise ValueError("Google Maps API Request Denied. Please ensure 'Directions API' is enabled in your Google Cloud Console for this key.")
             elif "INVALID_REQUEST" in err_msg:
                 raise ValueError(f"Invalid Google Maps location request between '{origin}' and '{destination}'.")

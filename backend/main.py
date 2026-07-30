@@ -195,7 +195,26 @@ def calculate_google_route(request: GoogleRouteRequest):
             "messages": messages
         }
     except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
+        err_str = str(ve)
+        if "Internet Connection" in err_str or "DNS Error" in err_str:
+            # Fallback to local CSJMU graph pathfinder if network drops out
+            try:
+                pathfinder.load_graph()
+                landmark_matcher.load_landmarks()
+                fallback_res = pathfinder.get_shortest_path("node_main_gate", "node_uiet")
+                maneuvers = landmark_matcher.process_path_maneuvers(fallback_res["path_details"])
+                fallback_messages = instruction_builder.generate_messages(maneuvers, use_ai=False)
+                return {
+                    "status": "success",
+                    "provider": "Local Offline CSJMU Graph (Network Fallback)",
+                    "total_distance_m": fallback_res["total_distance_m"],
+                    "total_duration": "5 mins",
+                    "coordinates": fallback_res["coordinates"],
+                    "messages": fallback_messages
+                }
+            except Exception:
+                pass
+        raise HTTPException(status_code=400, detail=err_str)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Google Maps API error: {str(e)}")
 
