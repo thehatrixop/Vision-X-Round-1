@@ -1,0 +1,25 @@
+# FastAPI Web Framework & ASGI Server
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+
+# Google Maps Official Python SDK
+googlemaps>=4.10.0
+
+# Spatial & Graph Routing Libraries
+networkx>=3.2.1
+geopy>=2.4.1
+shapely>=2.0.3
+scipy>=1.12.0
+osmnx>=1.9.1
+
+# OpenRouteService & HTTP Clients
+openrouteservice>=2.3.0
+httpx>=0.27.0
+requests>=2.31.0
+
+# Environment Management
+python-dotenv>=1.0.1
+
+# Cerebras Cloud AI SDK (Conversational Instruction Refiner)
+cerebras-cloud-sdk>=1.0.0

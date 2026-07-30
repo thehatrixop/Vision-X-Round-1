@@ -48,6 +48,7 @@ vision_x/
 ├── system_architecture_report.md         # Multi-channel architecture report (Source Call, Source SMS, Web UI) & flowcharts
 ├── backend/
 │   ├── main.py                           # FastAPI application entrypoint & API endpoints
+│   ├── requirements.txt                  # Dedicated backend Python dependencies
 │   ├── data/
 │   │   ├── graph.json                    # Spatial network (Nodes & Edges with lat/lon/weights)
 │   │   └── landmarks.json                # Visual landmark POIs database
