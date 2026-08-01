@@ -1,17 +1,33 @@
 import os
+import sys
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+# Ensure root directory is included in sys.path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 # Load environment variables (.env file if available)
 load_dotenv()
 
-from backend.services.pathfinder import PathfinderService
-from backend.services.landmark_matcher import LandmarkMatcherService
-from backend.services.instruction_builder import InstructionBuilderService
-from backend.services.google_directions import GoogleDirectionsService
+try:
+    from backend.services.pathfinder import PathfinderService
+    from backend.services.landmark_matcher import LandmarkMatcherService
+    from backend.services.instruction_builder import InstructionBuilderService
+    from backend.services.google_directions import GoogleDirectionsService
+except ModuleNotFoundError:
+    from services.pathfinder import PathfinderService
+    from services.landmark_matcher import LandmarkMatcherService
+    from services.instruction_builder import InstructionBuilderService
+    from services.google_directions import GoogleDirectionsService
 
 app = FastAPI(
     title="Vision X — Landmark Navigation API",
@@ -23,7 +39,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -37,8 +53,10 @@ except Exception as e:
     print(f"[Main Setup Error]: {e}")
 
 class RouteRequest(BaseModel):
-    start_node: str
-    end_node: str
+    start_node: Optional[str] = None
+    end_node: Optional[str] = None
+    start_coords: Optional[List[float]] = None
+    end_coords: Optional[List[float]] = None
     use_ai_refinement: Optional[bool] = True
 
 class RouteResponse(BaseModel):
@@ -222,8 +240,9 @@ def calculate_google_route(request: GoogleRouteRequest):
 def calculate_route(request: RouteRequest):
     """
     Computes shortest path, matches nearby landmarks at turns, and generates message-based instructions.
+    Supports both predefined node IDs and custom manual GPS coordinate pins.
     """
-    if request.start_node == request.end_node:
+    if request.start_node and request.start_node == request.end_node:
         raise HTTPException(status_code=400, detail="Start and final location cannot be identical.")
         
     try:
@@ -231,8 +250,16 @@ def calculate_route(request: RouteRequest):
         pathfinder.load_graph()
         landmark_matcher.load_landmarks()
         
-        # 1. Compute shortest path
-        path_result = pathfinder.get_shortest_path(request.start_node, request.end_node)
+        # 1. Compute shortest path by manual coordinates or by node IDs
+        if request.start_coords and request.end_coords and len(request.start_coords) == 2 and len(request.end_coords) == 2:
+            path_result = pathfinder.get_shortest_path_by_coords(
+                request.start_coords[0], request.start_coords[1],
+                request.end_coords[0], request.end_coords[1]
+            )
+        elif request.start_node and request.end_node:
+            path_result = pathfinder.get_shortest_path(request.start_node, request.end_node)
+        else:
+            raise HTTPException(status_code=400, detail="Must provide either start_node & end_node OR start_coords & end_coords.")
         
         # 2. Match maneuvers & landmarks
         maneuver_steps = landmark_matcher.process_path_maneuvers(path_result["path_details"])
@@ -252,6 +279,11 @@ def calculate_route(request: RouteRequest):
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal route processing error: {str(e)}")
+
+# Mount static frontend files if directory exists
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn

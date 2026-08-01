@@ -35,8 +35,8 @@
       "id": "lm_uiet",
       "name": "UIET Engineering & Technology Block",
       "category": "Academic",
-      "lat": 26.5001,
-      "lon": 80.2676,
+      "lat": 26.50098417502509,
+      "lon": 80.26550809655177,
       "nearest_node": "node_uiet",
       "visibility_radius_m": 55.0,
       "description": "University Institute of Engineering and Technology (UIET) building complex"

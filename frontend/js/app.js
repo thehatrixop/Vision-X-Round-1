@@ -17,23 +17,29 @@ const TILE_STYLES = {
     satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 };
 
-let currentEngineMode = 'google'; // Default: 'google' or 'csjmu'
+let currentEngineMode = 'google'; // Default: 'google', 'csjmu', or 'custom'
+let customStartMarker = null;
+let customEndMarker = null;
 
-/** Switch between CSJMU Mode and Google Maps API Mode */
+/** Switch between CSJMU Mode, Google Maps API Mode, and Manual Pinning Mode */
 function switchEngineMode(mode) {
     currentEngineMode = mode;
     
     const csjmuBtn = document.getElementById('mode-csjmu-btn');
     const googleBtn = document.getElementById('mode-google-btn');
+    const customBtn = document.getElementById('mode-custom-btn');
     
     const startSelect = document.getElementById('start-location');
     const endSelect = document.getElementById('end-location');
     const startText = document.getElementById('start-location-text');
     const endText = document.getElementById('end-location-text');
 
+    if (csjmuBtn) csjmuBtn.classList.remove('active');
+    if (googleBtn) googleBtn.classList.remove('active');
+    if (customBtn) customBtn.classList.remove('active');
+
     if (mode === 'google') {
-        csjmuBtn.classList.remove('active');
-        googleBtn.classList.add('active');
+        if (googleBtn) googleBtn.classList.add('active');
         
         startSelect.style.display = 'none';
         endSelect.style.display = 'none';
@@ -42,15 +48,68 @@ function switchEngineMode(mode) {
         
         startText.value = "Gate 1 CSJM University Kanpur";
         endText.value = "UIET CSJM University Kanpur";
+    } else if (mode === 'custom') {
+        if (customBtn) customBtn.classList.add('active');
+        
+        startSelect.style.display = 'none';
+        endSelect.style.display = 'none';
+        startText.style.display = 'block';
+        endText.style.display = 'block';
+
+        initCustomPins();
     } else {
-        googleBtn.classList.remove('active');
-        csjmuBtn.classList.add('active');
+        if (csjmuBtn) csjmuBtn.classList.add('active');
         
         startText.style.display = 'none';
         endText.style.display = 'none';
         startSelect.style.display = 'block';
         endSelect.style.display = 'block';
     }
+}
+
+/** Initialize interactive draggable Start & End pins on map for manual pinning */
+function initCustomPins() {
+    if (!map) return;
+    const center = map.getCenter();
+    
+    if (!customStartMarker) {
+        const startIcon = L.divIcon({
+            className: 'csjmu-map-pin-container',
+            html: `<div class="csjmu-pin-wrapper pin-start"><div class="pin-head" style="background:#10b981;"><i class="fa-solid fa-location-dot"></i></div></div>`,
+            iconSize: [32, 42],
+            iconAnchor: [16, 42]
+        });
+        const startLatLon = [center.lat - 0.001, center.lng - 0.001];
+        customStartMarker = L.marker(startLatLon, { draggable: true, icon: startIcon }).addTo(map);
+        customStartMarker.bindPopup("<b>📍 Start Location Pin</b><br>Drag me anywhere on map!").openPopup();
+        
+        customStartMarker.on('dragend', () => {
+            const pos = customStartMarker.getLatLng();
+            document.getElementById('start-location-text').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+        });
+    }
+
+    if (!customEndMarker) {
+        const endIcon = L.divIcon({
+            className: 'csjmu-map-pin-container',
+            html: `<div class="csjmu-pin-wrapper pin-end"><div class="pin-head" style="background:#f43f5e;"><i class="fa-solid fa-flag-checkered"></i></div></div>`,
+            iconSize: [32, 42],
+            iconAnchor: [16, 42]
+        });
+        const endLatLon = [center.lat + 0.001, center.lng + 0.001];
+        customEndMarker = L.marker(endLatLon, { draggable: true, icon: endIcon }).addTo(map);
+        customEndMarker.bindPopup("<b>🏁 Destination Pin</b><br>Drag me anywhere on map!").openPopup();
+
+        customEndMarker.on('dragend', () => {
+            const pos = customEndMarker.getLatLng();
+            document.getElementById('end-location-text').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+        });
+    }
+
+    const startPos = customStartMarker.getLatLng();
+    const endPos = customEndMarker.getLatLng();
+    document.getElementById('start-location-text').value = `${startPos.lat.toFixed(6)}, ${startPos.lng.toFixed(6)}`;
+    document.getElementById('end-location-text').value = `${endPos.lat.toFixed(6)}, ${endPos.lng.toFixed(6)}`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -134,6 +193,19 @@ function setupTileSwitcher() {
     });
 }
 
+const FALLBACK_LANDMARKS = [
+    { id: "lm_main_gate", name: "Main Entrance Gate No. 1 (GT Road)", category: "Gate", lat: 26.4962, lon: 80.2665, nearest_node: "node_main_gate", description: "Grand main entrance gate of CSJM University on Kalyanpur GT Road" },
+    { id: "lm_admin", name: "Administrative Building (VC Secretariat)", category: "Administrative", lat: 26.4981, lon: 80.2682, nearest_node: "node_admin_block", description: "Central administrative block housing Vice Chancellor Secretariat & Administrative offices" },
+    { id: "lm_library", name: "Central Library Building", category: "Library", lat: 26.4989, lon: 80.2693, nearest_node: "node_central_library", description: "Chhatrapati Shahuji Maharaj Central Library facing the central academic lawn" },
+    { id: "lm_uiet", name: "UIET Engineering & Technology Block", category: "Academic", lat: 26.5001, lon: 80.2676, nearest_node: "node_uiet", description: "University Institute of Engineering and Technology (UIET) building complex" },
+    { id: "lm_auditorium", name: "CSJMU Main Auditorium", category: "Event", lat: 26.4977, lon: 80.2704, nearest_node: "node_auditorium", description: "University Grand Jubilee Auditorium and Convocation Hall" },
+    { id: "lm_canteen", name: "Central Canteen & Student Shopping Complex", category: "Dining", lat: 26.4990, lon: 80.2709, nearest_node: "node_canteen", description: "Central student canteen, food stalls, stationery, and bank ATMs" },
+    { id: "lm_incubation", name: "Incubation & Robotics Center", category: "Research", lat: 26.5006, lon: 80.2689, nearest_node: "node_incubation_center", description: "Chhatrapati Shahuji Maharaj Innovation Hub and Startup Incubation Center" },
+    { id: "lm_sports", name: "CSJMU Sports Stadium & Athletic Complex", category: "Sports", lat: 26.4969, lon: 80.2720, nearest_node: "node_sports_stadium", description: "University Sports Stadium, athletic track, and indoor sports hall" },
+    { id: "lm_hostel", name: "Shivaji Boys Hostel", category: "Residential", lat: 26.5016, lon: 80.2701, nearest_node: "node_boys_hostel", description: "Residential boys hostel block in the northern residential sector" },
+    { id: "lm_pharmacy", name: "Department of Pharmacy & Life Sciences", category: "Academic", lat: 26.4996, lon: 80.2667, nearest_node: "node_pharmacy_dept", description: "Department of Pharmaceutical Sciences and Life Sciences laboratories" }
+];
+
 /** Fetch CSJMU locations from FastAPI endpoint */
 async function fetchLocations() {
     try {
@@ -150,9 +222,29 @@ async function fetchLocations() {
                 const bounds = L.latLngBounds(data.locations.map(loc => [loc.lat, loc.lon]));
                 map.fitBounds(bounds, { padding: [50, 50] });
             }
+            return;
         }
     } catch (err) {
-        console.error('[Vision X] Error fetching locations:', err);
+        console.warn('[Vision X] Backend API offline. Loading fallback landmarks:', err);
+        
+        // Render offline fallback data on map & dropdowns
+        const fallbackLocations = FALLBACK_LANDMARKS.map(lm => ({
+            id: lm.nearest_node,
+            name: lm.name,
+            category: lm.category,
+            lat: lm.lat,
+            lon: lm.lon
+        }));
+        
+        currentLocations = fallbackLocations;
+        populateSelects(fallbackLocations);
+        renderMapLandmarks(FALLBACK_LANDMARKS);
+        
+        if (fallbackLocations.length > 0) {
+            const bounds = L.latLngBounds(fallbackLocations.map(loc => [loc.lat, loc.lon]));
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
         displayMessage('error', 'Backend API offline. Please ensure FastAPI server is running on http://127.0.0.1:8000.');
     }
 }
@@ -290,6 +382,22 @@ async function handleFindRoute() {
             use_ai_refinement: useAi
         };
         btn.innerHTML = '<i class="fa-brands fa-google fa-spin"></i> Querying Google Maps API...';
+    } else if (currentEngineMode === 'custom') {
+        const startPos = customStartMarker ? customStartMarker.getLatLng() : null;
+        const endPos = customEndMarker ? customEndMarker.getLatLng() : null;
+
+        if (!startPos || !endPos) {
+            alert('Please place both Start and Destination pins on the map.');
+            return;
+        }
+
+        endpoint = `${API_BASE_URL}/api/route`;
+        payload = {
+            start_coords: [startPos.lat, startPos.lng],
+            end_coords: [endPos.lat, endPos.lng],
+            use_ai_refinement: useAi
+        };
+        btn.innerHTML = '<i class="fa-solid fa-compass fa-spin"></i> Routing between Custom Pins...';
     } else {
         const startNode = document.getElementById('start-location').value;
         const endNode = document.getElementById('end-location').value;
