@@ -22,12 +22,10 @@ try:
     from backend.services.pathfinder import PathfinderService
     from backend.services.landmark_matcher import LandmarkMatcherService
     from backend.services.instruction_builder import InstructionBuilderService
-    from backend.services.google_directions import GoogleDirectionsService
 except ModuleNotFoundError:
     from services.pathfinder import PathfinderService
     from services.landmark_matcher import LandmarkMatcherService
     from services.instruction_builder import InstructionBuilderService
-    from services.google_directions import GoogleDirectionsService
 
 app = FastAPI(
     title="Vision X — Landmark Navigation API",
@@ -53,10 +51,8 @@ except Exception as e:
     print(f"[Main Setup Error]: {e}")
 
 class RouteRequest(BaseModel):
-    start_node: Optional[str] = None
-    end_node: Optional[str] = None
-    start_coords: Optional[List[float]] = None
-    end_coords: Optional[List[float]] = None
+    start_node: str
+    end_node: str
     use_ai_refinement: Optional[bool] = True
 
 class RouteResponse(BaseModel):
@@ -156,93 +152,12 @@ def update_landmark_coordinates(request: UpdateLandmarkRequest):
         "new_coords": {"lat": request.lat, "lon": request.lon}
     }
 
-class GoogleRouteRequest(BaseModel):
-    start_location: str
-    end_location: str
-    google_api_key: Optional[str] = None
-    use_ai_refinement: Optional[bool] = True
-
-@app.post("/api/google/route")
-def calculate_google_route(request: GoogleRouteRequest):
-    """
-    Google Maps API Route Calculation Endpoint: Queries official Google Maps Walking Directions API
-    and returns parsed landmark steps and path coordinates.
-    """
-    try:
-        # Reload environment variables to pick up any key updates
-        load_dotenv(override=True)
-        
-        service = GoogleDirectionsService(api_key=request.google_api_key)
-        google_result = service.get_google_walking_route(
-            origin=request.start_location,
-            destination=request.end_location,
-            custom_key=request.google_api_key
-        )
-        
-        # Optional Cerebras AI refinement on Google steps
-        messages = []
-        for step in google_result["steps"]:
-            instr = step["instruction"]
-            if step["landmark"]:
-                instr += f" (Near {step['landmark']})"
-            messages.append({
-                "step": step["step"],
-                "instruction": instr,
-                "distance_m": step["distance_m"],
-                "landmark": step["landmark"],
-                "turn": step["maneuver"],
-                "lat": step["end_location"][0],
-                "lon": step["end_location"][1]
-            })
-            
-        if request.use_ai_refinement:
-            try:
-                messages = instruction_builder.generate_messages(
-                    [{"node_name": m["instruction"], "distance_to_next_m": m["distance_m"], "turn_direction": m["turn"], "landmark": {"name": m["landmark"]} if m["landmark"] else None, "lat": m["lat"], "lon": m["lon"], "node_id": f"step_{m['step']}"} for m in messages],
-                    use_ai=True
-                )
-            except Exception:
-                pass
-
-        return {
-            "status": "success",
-            "provider": "Google Maps API",
-            "total_distance_m": google_result["total_distance_m"],
-            "total_duration": google_result["total_duration"],
-            "coordinates": google_result["coordinates"],
-            "messages": messages
-        }
-    except ValueError as ve:
-        err_str = str(ve)
-        if "Internet Connection" in err_str or "DNS Error" in err_str:
-            # Fallback to local CSJMU graph pathfinder if network drops out
-            try:
-                pathfinder.load_graph()
-                landmark_matcher.load_landmarks()
-                fallback_res = pathfinder.get_shortest_path("node_main_gate", "node_uiet")
-                maneuvers = landmark_matcher.process_path_maneuvers(fallback_res["path_details"])
-                fallback_messages = instruction_builder.generate_messages(maneuvers, use_ai=False)
-                return {
-                    "status": "success",
-                    "provider": "Local Offline CSJMU Graph (Network Fallback)",
-                    "total_distance_m": fallback_res["total_distance_m"],
-                    "total_duration": "5 mins",
-                    "coordinates": fallback_res["coordinates"],
-                    "messages": fallback_messages
-                }
-            except Exception:
-                pass
-        raise HTTPException(status_code=400, detail=err_str)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Google Maps API error: {str(e)}")
-
 @app.post("/api/route", response_model=RouteResponse)
 def calculate_route(request: RouteRequest):
     """
     Computes shortest path, matches nearby landmarks at turns, and generates message-based instructions.
-    Supports both predefined node IDs and custom manual GPS coordinate pins.
     """
-    if request.start_node and request.start_node == request.end_node:
+    if request.start_node == request.end_node:
         raise HTTPException(status_code=400, detail="Start and final location cannot be identical.")
         
     try:
@@ -250,16 +165,8 @@ def calculate_route(request: RouteRequest):
         pathfinder.load_graph()
         landmark_matcher.load_landmarks()
         
-        # 1. Compute shortest path by manual coordinates or by node IDs
-        if request.start_coords and request.end_coords and len(request.start_coords) == 2 and len(request.end_coords) == 2:
-            path_result = pathfinder.get_shortest_path_by_coords(
-                request.start_coords[0], request.start_coords[1],
-                request.end_coords[0], request.end_coords[1]
-            )
-        elif request.start_node and request.end_node:
-            path_result = pathfinder.get_shortest_path(request.start_node, request.end_node)
-        else:
-            raise HTTPException(status_code=400, detail="Must provide either start_node & end_node OR start_coords & end_coords.")
+        # 1. Compute shortest path by node IDs
+        path_result = pathfinder.get_shortest_path(request.start_node, request.end_node)
         
         # 2. Match maneuvers & landmarks
         maneuver_steps = landmark_matcher.process_path_maneuvers(path_result["path_details"])

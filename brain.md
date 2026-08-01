@@ -6,7 +6,7 @@
 
 ## 1. System Overview
 
-**Vision X** is a landmark-oriented, message-based route navigation panel powered primarily by **Google Maps API** (Directions API, Places API, Geocoding API). Given a user's starting point and final destination across CSJMU Kanpur or any global location, it calculates the Google walking path, analyzes turn maneuver angles, snaps nearby physical visual landmarks, and formats directions into intuitive human messages (e.g., *"Walk 200m towards Administrative Building and then take a left turn there"*).
+**Vision X** is a landmark-oriented, message-based route navigation panel. Given a user's starting point and final destination across CSJMU Kanpur, it calculates the walking path, analyzes turn maneuver angles, snaps nearby physical visual landmarks, and formats directions into intuitive human messages (e.g., *"Walk 200m towards Administrative Building and then take a left turn there"*).
 
 ### Data & Execution Flow
 ```
@@ -16,7 +16,7 @@
       [ FastAPI Backend (`/api/route`) ]
                 │
                 ├─► 1. Pathfinder Service (`pathfinder.py`)
-                │      Runs Dijkstra/A* on spatial graph (`graph.json`)
+                │      Runs OpenRouteService / OSRM / NetworkX Dijkstra on spatial graph (`graph.json`)
                 │
                 ├─► 2. Landmark Matcher (`landmark_matcher.py`)
                 │      Calculates bearing turn angles (Left/Right/Straight)
@@ -40,10 +40,10 @@
 
 ```
 vision_x/
-├── .env                                  # Environment configuration (GOOGLE_MAPS_API_KEY, CEREBRAS_API_KEY)
+├── .env                                  # Environment configuration (CEREBRAS_API_KEY)
 ├── vercel.json                           # Vercel serverless deployment routing configuration
 ├── brain.md                              # Master AI index & architecture specification
-├── requirements.txt                      # Python dependencies (FastAPI, NetworkX, Geopy, Googlemaps, Cerebras)
+├── requirements.txt                      # Python dependencies (FastAPI, NetworkX, Geopy, Cerebras)
 ├── route_landmark_navigation_draft.md    # Initial design draft
 ├── system_architecture_report.md         # Multi-channel architecture report (Source Call, Source SMS, Web UI) & flowcharts
 ├── backend/
@@ -53,7 +53,7 @@ vision_x/
 │   │   ├── graph.json                    # Spatial network (Nodes & Edges with lat/lon/weights)
 │   │   └── landmarks.json                # Visual landmark POIs database
 │   └── services/
-│       ├── pathfinder.py                 # Graph pathfinder (Dijkstra / A*)
+│       ├── pathfinder.py                 # Graph pathfinder (OpenRouteService / OSRM / NetworkX)
 │       ├── landmark_matcher.py           # Bearing angle calculation & spatial landmark matching
 │       └── instruction_builder.py        # Message builder (Rule-based & Cerebras API LLM)
 └── frontend/
@@ -109,18 +109,6 @@ vision_x/
     ]
   }
   ```
-
-#### `POST /api/google/route` (Google Maps API Walking Route)
-- **Request**:
-  ```json
-  {
-    "start_location": "Gate 1 CSJM University Kanpur",
-    "end_location": "UIET CSJM University Kanpur",
-    "google_api_key": "YOUR_OPTIONAL_GOOGLE_API_KEY",
-    "use_ai_refinement": true
-  }
-  ```
-- **Response**: Returns Google Walking Directions, Google Places nearby landmarks, path coordinates, and Cerebras AI conversational instructions.
 
 #### `POST /api/landmarks/update` (Admin Pin Calibration)
 - **Request**:

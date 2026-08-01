@@ -25,8 +25,8 @@
       "id": "lm_library",
       "name": "Central Library Building",
       "category": "Library",
-      "lat": 26.4989,
-      "lon": 80.2693,
+      "lat": 26.50112015829331,
+      "lon": 80.26699407897705,
       "nearest_node": "node_central_library",
       "visibility_radius_m": 50.0,
       "description": "Chhatrapati Shahuji Maharaj Central Library facing the central academic lawn"

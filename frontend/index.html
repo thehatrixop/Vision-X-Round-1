@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vision X — Google Maps Landmark Navigation Panel</title>
+    <title>Vision X — CSJMU Landmark Navigation Panel</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,17 +24,16 @@
         <!-- Header bar -->
         <header class="app-header">
             <div class="logo-area">
-                <div class="logo-icon"><i class="fa-brands fa-google"></i></div>
+                <div class="logo-icon"><i class="fa-solid fa-map-location-dot"></i></div>
                 <div class="logo-text">
                     <h1>Vision X</h1>
-                    <span class="tagline">Google Maps Landmark Navigation Panel</span>
+                    <span class="tagline">CSJMU Landmark Navigation Panel</span>
                 </div>
             </div>
             <div class="header-actions">
                 <button id="admin-calibrate-btn" class="status-badge admin-btn" title="Toggle Drag & Drop Pin Calibration Mode">
                     <i class="fa-solid fa-up-down-left-right"></i> Calibrate Pins
                 </button>
-                <span class="status-badge google-badge"><i class="fa-brands fa-google"></i> Google Maps Powered</span>
                 <span class="status-badge"><i class="fa-solid fa-bolt"></i> Cerebras LLM Ready</span>
             </div>
         </header>
@@ -44,33 +43,18 @@
             <!-- Left Side: Chat & Navigation Panel -->
             <section class="panel navigation-panel">
                 <div class="control-box glass-card">
-                    <h2 class="section-title"><i class="fa-solid fa-route"></i> Plan Route</h2>
-                    
-                    <!-- Engine Mode Selector -->
-                    <div class="mode-selector-tabs">
-                        <button id="mode-google-btn" class="mode-tab active" onclick="switchEngineMode('google')">
-                            <i class="fa-brands fa-google"></i> Google Maps Engine
-                        </button>
-                        <button id="mode-csjmu-btn" class="mode-tab" onclick="switchEngineMode('csjmu')">
-                            <i class="fa-solid fa-map-location-dot"></i> CSJMU Landmarks
-                        </button>
-                        <button id="mode-custom-btn" class="mode-tab" onclick="switchEngineMode('custom')">
-                            <i class="fa-solid fa-map-pin"></i> Manual Pinning
-                        </button>
-                    </div>
+                    <h2 class="section-title"><i class="fa-solid fa-route"></i> Plan CSJMU Route</h2>
 
                     <div class="input-group">
-                        <label for="start-location-text"><i class="fa-solid fa-location-dot text-emerald"></i> Present Location</label>
-                        <input type="text" id="start-location-text" class="custom-input" placeholder="e.g. Gate 1 CSJM University Kanpur" value="Gate 1 CSJM University Kanpur">
-                        <select id="start-location" class="custom-select" style="display: none;">
+                        <label for="start-location"><i class="fa-solid fa-location-dot text-emerald"></i> Present Location</label>
+                        <select id="start-location" class="custom-select">
                             <option value="" disabled selected>Loading CSJMU locations...</option>
                         </select>
                     </div>
 
                     <div class="input-group">
-                        <label for="end-location-text"><i class="fa-solid fa-flag-checkered text-rose"></i> Final Destination</label>
-                        <input type="text" id="end-location-text" class="custom-input" placeholder="e.g. UIET CSJM University Kanpur" value="UIET CSJM University Kanpur">
-                        <select id="end-location" class="custom-select" style="display: none;">
+                        <label for="end-location"><i class="fa-solid fa-flag-checkered text-rose"></i> Final Destination</label>
+                        <select id="end-location" class="custom-select">
                             <option value="" disabled selected>Loading CSJMU locations...</option>
                         </select>
                     </div>
@@ -84,7 +68,7 @@
                     </div>
 
                     <button id="find-route-btn" class="btn btn-primary">
-                        <i class="fa-solid fa-paper-plane"></i> Get Google Landmark Route
+                        <i class="fa-solid fa-paper-plane"></i> Get CSJMU Landmark Route
                     </button>
                 </div>
 
@@ -92,15 +76,15 @@
                 <div class="messages-container glass-card">
                     <div class="messages-header">
                         <h3><i class="fa-solid fa-comments"></i> Landmark Route Messages</h3>
-                        <span id="route-stats" class="route-stats">Google Maps Powered</span>
+                        <span id="route-stats" class="route-stats">CSJMU Landmarks Powered</span>
                     </div>
 
                     <div id="messages-list" class="messages-list">
                         <!-- Welcome message bubble -->
                         <div class="message-bubble bot-bubble">
-                            <div class="message-avatar"><i class="fa-brands fa-google"></i></div>
+                            <div class="message-avatar"><i class="fa-solid fa-map-location-dot"></i></div>
                             <div class="message-content">
-                                <p>Welcome to <strong>Vision X Google Maps Navigation</strong>! Enter any starting location and destination to get step-by-step landmark messages powered by Google Maps Directions & Places API.</p>
+                                <p>Welcome to <strong>Vision X CSJMU Navigation</strong>! Select your starting location and destination to get step-by-step landmark messages.</p>
                             </div>
                         </div>
                     </div>
@@ -120,7 +104,7 @@
 
                     <div class="map-legend">
                         <div class="legend-item"><span class="marker-dot start-dot"></span> Start Location</div>
-                        <div class="legend-item"><span class="marker-dot path-dot"></span> Google Walking Route</div>
+                        <div class="legend-item"><span class="marker-dot path-dot"></span> Walking Route</div>
                         <div class="legend-item"><span class="marker-dot landmark-dot"></span> Snapped Landmark</div>
                         <div class="legend-item"><span class="marker-dot end-dot"></span> Final Destination</div>
                     </div>

@@ -9,6 +9,8 @@ let pathPolyline = null;
 let pathGlowPolyline = null;
 let markersLayerGroup = null;
 let currentLocations = [];
+let landmarkMarkersMap = new Map();
+let isAdminCalibrating = false;
 
 // Available Map Tile Providers
 const TILE_STYLES = {
@@ -16,101 +18,6 @@ const TILE_STYLES = {
     osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 };
-
-let currentEngineMode = 'google'; // Default: 'google', 'csjmu', or 'custom'
-let customStartMarker = null;
-let customEndMarker = null;
-
-/** Switch between CSJMU Mode, Google Maps API Mode, and Manual Pinning Mode */
-function switchEngineMode(mode) {
-    currentEngineMode = mode;
-    
-    const csjmuBtn = document.getElementById('mode-csjmu-btn');
-    const googleBtn = document.getElementById('mode-google-btn');
-    const customBtn = document.getElementById('mode-custom-btn');
-    
-    const startSelect = document.getElementById('start-location');
-    const endSelect = document.getElementById('end-location');
-    const startText = document.getElementById('start-location-text');
-    const endText = document.getElementById('end-location-text');
-
-    if (csjmuBtn) csjmuBtn.classList.remove('active');
-    if (googleBtn) googleBtn.classList.remove('active');
-    if (customBtn) customBtn.classList.remove('active');
-
-    if (mode === 'google') {
-        if (googleBtn) googleBtn.classList.add('active');
-        
-        startSelect.style.display = 'none';
-        endSelect.style.display = 'none';
-        startText.style.display = 'block';
-        endText.style.display = 'block';
-        
-        startText.value = "Gate 1 CSJM University Kanpur";
-        endText.value = "UIET CSJM University Kanpur";
-    } else if (mode === 'custom') {
-        if (customBtn) customBtn.classList.add('active');
-        
-        startSelect.style.display = 'none';
-        endSelect.style.display = 'none';
-        startText.style.display = 'block';
-        endText.style.display = 'block';
-
-        initCustomPins();
-    } else {
-        if (csjmuBtn) csjmuBtn.classList.add('active');
-        
-        startText.style.display = 'none';
-        endText.style.display = 'none';
-        startSelect.style.display = 'block';
-        endSelect.style.display = 'block';
-    }
-}
-
-/** Initialize interactive draggable Start & End pins on map for manual pinning */
-function initCustomPins() {
-    if (!map) return;
-    const center = map.getCenter();
-    
-    if (!customStartMarker) {
-        const startIcon = L.divIcon({
-            className: 'csjmu-map-pin-container',
-            html: `<div class="csjmu-pin-wrapper pin-start"><div class="pin-head" style="background:#10b981;"><i class="fa-solid fa-location-dot"></i></div></div>`,
-            iconSize: [32, 42],
-            iconAnchor: [16, 42]
-        });
-        const startLatLon = [center.lat - 0.001, center.lng - 0.001];
-        customStartMarker = L.marker(startLatLon, { draggable: true, icon: startIcon }).addTo(map);
-        customStartMarker.bindPopup("<b>📍 Start Location Pin</b><br>Drag me anywhere on map!").openPopup();
-        
-        customStartMarker.on('dragend', () => {
-            const pos = customStartMarker.getLatLng();
-            document.getElementById('start-location-text').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
-        });
-    }
-
-    if (!customEndMarker) {
-        const endIcon = L.divIcon({
-            className: 'csjmu-map-pin-container',
-            html: `<div class="csjmu-pin-wrapper pin-end"><div class="pin-head" style="background:#f43f5e;"><i class="fa-solid fa-flag-checkered"></i></div></div>`,
-            iconSize: [32, 42],
-            iconAnchor: [16, 42]
-        });
-        const endLatLon = [center.lat + 0.001, center.lng + 0.001];
-        customEndMarker = L.marker(endLatLon, { draggable: true, icon: endIcon }).addTo(map);
-        customEndMarker.bindPopup("<b>🏁 Destination Pin</b><br>Drag me anywhere on map!").openPopup();
-
-        customEndMarker.on('dragend', () => {
-            const pos = customEndMarker.getLatLng();
-            document.getElementById('end-location-text').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
-        });
-    }
-
-    const startPos = customStartMarker.getLatLng();
-    const endPos = customEndMarker.getLatLng();
-    document.getElementById('start-location-text').value = `${startPos.lat.toFixed(6)}, ${startPos.lng.toFixed(6)}`;
-    document.getElementById('end-location-text').value = `${endPos.lat.toFixed(6)}, ${endPos.lng.toFixed(6)}`;
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
@@ -363,63 +270,27 @@ async function handleFindRoute() {
     const useAi = document.getElementById('ai-toggle').checked;
     const btn = document.getElementById('find-route-btn');
     
-    let endpoint = `${API_BASE_URL}/api/route`;
-    let payload = {};
+    const startNode = document.getElementById('start-location').value;
+    const endNode = document.getElementById('end-location').value;
 
-    if (currentEngineMode === 'google') {
-        const startVal = document.getElementById('start-location-text').value.trim();
-        const endVal = document.getElementById('end-location-text').value.trim();
-
-        if (!startVal || !endVal) {
-            alert('Please enter starting location and destination for Google Maps.');
-            return;
-        }
-
-        endpoint = `${API_BASE_URL}/api/google/route`;
-        payload = {
-            start_location: startVal,
-            end_location: endVal,
-            use_ai_refinement: useAi
-        };
-        btn.innerHTML = '<i class="fa-brands fa-google fa-spin"></i> Querying Google Maps API...';
-    } else if (currentEngineMode === 'custom') {
-        const startPos = customStartMarker ? customStartMarker.getLatLng() : null;
-        const endPos = customEndMarker ? customEndMarker.getLatLng() : null;
-
-        if (!startPos || !endPos) {
-            alert('Please place both Start and Destination pins on the map.');
-            return;
-        }
-
-        endpoint = `${API_BASE_URL}/api/route`;
-        payload = {
-            start_coords: [startPos.lat, startPos.lng],
-            end_coords: [endPos.lat, endPos.lng],
-            use_ai_refinement: useAi
-        };
-        btn.innerHTML = '<i class="fa-solid fa-compass fa-spin"></i> Routing between Custom Pins...';
-    } else {
-        const startNode = document.getElementById('start-location').value;
-        const endNode = document.getElementById('end-location').value;
-
-        if (!startNode || !endNode) {
-            alert('Please select both a present location and destination.');
-            return;
-        }
-
-        if (startNode === endNode) {
-            alert('Present location and destination cannot be identical.');
-            return;
-        }
-
-        payload = {
-            start_node: startNode,
-            end_node: endNode,
-            use_ai_refinement: useAi
-        };
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculating CSJMU Path...';
+    if (!startNode || !endNode) {
+        alert('Please select both a present location and destination.');
+        return;
     }
 
+    if (startNode === endNode) {
+        alert('Present location and destination cannot be identical.');
+        return;
+    }
+
+    const endpoint = `${API_BASE_URL}/api/route`;
+    const payload = {
+        start_node: startNode,
+        end_node: endNode,
+        use_ai_refinement: useAi
+    };
+
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculating CSJMU Path...';
     btn.disabled = true;
 
     try {
@@ -432,7 +303,7 @@ async function handleFindRoute() {
         const data = await response.json();
 
         if (response.ok && data.status === 'success') {
-            renderRouteMessages(data.messages, data.total_distance_m, data.provider || data.routing_engine);
+            renderRouteMessages(data.messages, data.total_distance_m, data.routing_engine);
             drawRouteOnMap(data.coordinates, data.messages);
         } else {
             alert(data.detail || 'Failed to calculate route.');
@@ -441,7 +312,7 @@ async function handleFindRoute() {
         console.error('[Vision X] Route error:', err);
         alert('Could not connect to backend server at ' + API_BASE_URL);
     } finally {
-        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Get Shortest Landmark Route';
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Get CSJMU Landmark Route';
         btn.disabled = false;
     }
 }
