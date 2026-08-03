@@ -31,18 +31,15 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button id="admin-calibrate-btn" class="status-badge admin-btn" title="Toggle Drag & Drop Pin Calibration Mode">
-                    <i class="fa-solid fa-up-down-left-right"></i> Calibrate Pins
-                </button>
-                <span class="status-badge"><i class="fa-solid fa-bolt"></i> Cerebras LLM Ready</span>
+                <span class="status-badge"><i class="fa-solid fa-bolt"></i> CSJMU Engine</span>
             </div>
         </header>
 
         <!-- Main Workspace -->
-        <main class="workspace">
+        <main class="workspace" id="workspace">
             <!-- Left Side: Chat & Navigation Panel -->
-            <section class="panel navigation-panel">
-                <div class="control-box glass-card">
+            <section class="panel navigation-panel" id="navigation-panel">
+                <div class="control-box glass-card" id="control-box">
                     <h2 class="section-title"><i class="fa-solid fa-route"></i> Plan CSJMU Route</h2>
 
                     <div class="input-group">
@@ -59,21 +56,18 @@
                         </select>
                     </div>
 
-                    <div class="toggle-group">
-                        <label class="toggle-label">
-                            <input type="checkbox" id="ai-toggle" checked>
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-text"><i class="fa-solid fa-wand-magic-sparkles"></i> Refine with Cerebras AI</span>
-                        </label>
-                    </div>
-
                     <button id="find-route-btn" class="btn btn-primary">
                         <i class="fa-solid fa-paper-plane"></i> Get CSJMU Landmark Route
                     </button>
                 </div>
 
+                <!-- Horizontal Resizer (Control Box vs Messages Height) -->
+                <div class="resizer-h" id="resizer-h" title="Drag vertically to adjust card height">
+                    <span class="resizer-grip-h"></span>
+                </div>
+
                 <!-- Chat & Instruction Messages Container -->
-                <div class="messages-container glass-card">
+                <div class="messages-container glass-card" id="messages-container">
                     <div class="messages-header">
                         <h3><i class="fa-solid fa-comments"></i> Landmark Route Messages</h3>
                         <span id="route-stats" class="route-stats">CSJMU Landmarks Powered</span>
@@ -91,8 +85,13 @@
                 </div>
             </section>
 
+            <!-- Vertical Resizer (Left Panel Width vs Map Width) -->
+            <div class="resizer-v" id="resizer-v" title="Drag horizontally to adjust panel width">
+                <span class="resizer-grip-v"></span>
+            </div>
+
             <!-- Right Side: Interactive Map View -->
-            <section class="panel map-panel glass-card">
+            <section class="panel map-panel glass-card" id="map-panel">
                 <div id="map" class="map-view"></div>
                 
                 <div class="map-overlay">

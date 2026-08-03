@@ -1,139 +1,43 @@
-# Brain.md — Vision X Landmark Navigation System Index
+# Vision X — Spatial Graph & Distance Recalibration Analysis
 
-> **AI Index Notice**: This document serves as the single source of truth for project structure, module boundaries, data schemas, and API contracts. Future AI agents reading this workspace should inspect `brain.md` first to understand system design without scanning every source file.
+## Overview
+This document logs the analysis and fixes performed following updates to the latitude and longitude coordinates of nodes in `backend/data/graph.json`.
 
----
+## Graph Node Coordinates (Updated Baseline)
+1. `node_main_gate`: `(26.496956, 80.266743)`
+2. `node_admin_block`: `(26.498399, 80.266207)`
+3. `node_central_library`: `(26.501120, 80.266994)`
+4. `node_uiet`: `(26.500984, 80.265508)`
+5. `node_auditorium`: `(26.504245, 80.268418)`
+6. `node_canteen`: `(26.499000, 80.270900)`
+7. `node_incubation_center`: `(26.497191, 80.267081)`
+8. `node_sports_stadium`: `(26.506301, 80.271041)`
+9. `node_boys_hostel`: `(26.508070, 80.270215)`
+10. `node_pharmacy_dept`: `(26.502998, 80.268113)`
 
-## 1. System Overview
+## Recalculated Edge Distances (`distance_m` via Haversine)
+- `node_main_gate` <-> `node_admin_block`: **169.0m** (was 275.0m)
+- `node_main_gate` <-> `node_sports_stadium`: **1123.0m** (was 560.0m)
+- `node_admin_block` <-> `node_central_library`: **312.4m** (was 140.0m)
+- `node_admin_block` <-> `node_auditorium`: **685.9m** (was 230.0m)
+- `node_admin_block` <-> `node_pharmacy_dept`: **545.1m** (was 220.0m)
+- `node_central_library` <-> `node_uiet`: **148.5m** (was 215.0m)
+- `node_central_library` <-> `node_canteen`: **454.4m** (was 165.0m)
+- `node_uiet` <-> `node_incubation_center`: **449.6m** (was 145.0m)
+- `node_uiet` <-> `node_pharmacy_dept`: **342.3m** (was 110.0m)
+- `node_incubation_center` <-> `node_boys_hostel`: **1248.6m** (was 160.0m)
+- `node_canteen` <-> `node_auditorium`: **633.1m** (was 155.0m)
+- `node_canteen` <-> `node_boys_hostel`: **1010.4m** (was 290.0m)
+- `node_auditorium` <-> `node_sports_stadium`: **346.7m** (was 185.0m)
 
-**Vision X** is a landmark-oriented, message-based route navigation panel. Given a user's starting point and final destination across CSJMU Kanpur, it calculates the walking path, analyzes turn maneuver angles, snaps nearby physical visual landmarks, and formats directions into intuitive human messages (e.g., *"Walk 200m towards Administrative Building and then take a left turn there"*).
-
-### Data & Execution Flow
-```
-[ User Input (Start & Destination) ]
-                │
-                ▼
-      [ FastAPI Backend (`/api/route`) ]
-                │
-                ├─► 1. Pathfinder Service (`pathfinder.py`)
-                │      Runs OpenRouteService / OSRM / NetworkX Dijkstra on spatial graph (`graph.json`)
-                │
-                ├─► 2. Landmark Matcher (`landmark_matcher.py`)
-                │      Calculates bearing turn angles (Left/Right/Straight)
-                │      Queries KDTree for nearest POIs (`landmarks.json`)
-                │
-                ├─► 3. Instruction Builder (`instruction_builder.py`)
-                │      Formats text via deterministic rules & Cerebras API (Llama 3.3/3.1)
-                │
-                ▼
-    [ Response Payload JSON ]
-                │
-                ▼
-      [ Frontend Web App (`app.js` + `index.html`) ]
-                ├─► Renders animated chat message bubbles
-                └─► Draws synchronized polyline & landmark pins on Leaflet Map
-```
-
----
-
-## 2. Directory & Module Mapping
-
-```
-vision_x/
-├── .env                                  # Environment configuration (CEREBRAS_API_KEY)
-├── vercel.json                           # Vercel serverless deployment routing configuration
-├── brain.md                              # Master AI index & architecture specification
-├── requirements.txt                      # Python dependencies (FastAPI, NetworkX, Geopy, Cerebras)
-├── route_landmark_navigation_draft.md    # Initial design draft
-├── system_architecture_report.md         # Multi-channel architecture report (Source Call, Source SMS, Web UI) & flowcharts
-├── backend/
-│   ├── main.py                           # FastAPI application entrypoint & API endpoints
-│   ├── requirements.txt                  # Dedicated backend Python dependencies
-│   ├── data/
-│   │   ├── graph.json                    # Spatial network (Nodes & Edges with lat/lon/weights)
-│   │   └── landmarks.json                # Visual landmark POIs database
-│   └── services/
-│       ├── pathfinder.py                 # Graph pathfinder (OpenRouteService / OSRM / NetworkX)
-│       ├── landmark_matcher.py           # Bearing angle calculation & spatial landmark matching
-│       └── instruction_builder.py        # Message builder (Rule-based & Cerebras API LLM)
-└── frontend/
-    ├── index.html                        # Main UI layout (Glassmorphic split view)
-    ├── css/style.css                     # Premium dark-mode styling & animations
-    └── js/app.js                         # Chat panel logic & Leaflet interactive map integration
-```
-
----
-
-## 3. Data Schemas
-
-### `graph.json` Schema
-- **Nodes**: `{ "id": string, "name": string, "lat": float, "lon": float }`
-- **Edges**: `{ "source": string, "target": string, "distance_m": float, "path_type": "walkway" | "road" }`
-
-### `landmarks.json` Schema
-- **Landmarks**: `{ "id": string, "name": string, "category": string, "lat": float, "lon": float, "nearest_node": string, "visibility_radius_m": float }`
-
-### API Endpoint Schemas
-
-#### `POST /api/route`
-- **Request**:
-  ```json
-  {
-    "start_node": "node_main_gate",
-    "end_node": "node_cs_block",
-    "use_ai_refinement": true
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "status": "success",
-    "total_distance_m": 450.0,
-    "path_nodes": ["node_main_gate", "node_admin_building", "node_cs_block"],
-    "coordinates": [[28.6139, 77.2090], ...],
-    "messages": [
-      {
-        "step": 1,
-        "instruction": "Walk 200m straight from Main Gate towards Administrative Building.",
-        "landmark": "Administrative Building",
-        "turn": "straight",
-        "distance_m": 200.0
-      },
-      {
-        "step": 2,
-        "instruction": "Walk 250m till Administrative Building and then take a left turn there towards CS Block.",
-        "landmark": "Administrative Building",
-        "turn": "left",
-        "distance_m": 250.0
-      }
-    ]
-  }
-  ```
-
-#### `POST /api/landmarks/update` (Admin Pin Calibration)
-- **Request**:
-  ```json
-  {
-    "id": "lm_admin",
-    "lat": 26.498124,
-    "lon": 80.268215
-  }
-  ```
-- **Response**: Updates coordinates in both `graph.json` and `landmarks.json` permanently on disk.
-
-#### `GET /api/landmarks`
-- **Response**: List of available start/end locations for dropdown selection.
-
----
-
-## 4. Key Components Detail
-
-1. **`pathfinder.py`**: Integrates **OpenRouteService (ORS)** Directions API & **OSRM Foot Engine** for real OpenStreetMap pedestrian footpath routing between coordinates, with NetworkX Dijkstra fallback.
-2. **`landmark_matcher.py`**:
-   - Calculates forward azimuth (bearing) between path vectors using `geopy`.
-   - Classifies turn angles into `straight`, `slight_left`, `left`, `slight_right`, `right`, or `u_turn`.
-   - Uses `scipy.spatial.KDTree` to snap nearest landmarks within `visibility_radius_m` to each maneuver node.
-3. **`instruction_builder.py`**:
-   - Generates formatted turn messages using deterministic rules.
-   - Optionally sends raw maneuvers to **Cerebras API** (`cerebras-cloud-sdk`, `llama-3.3-70b`) for conversational polishing.
-4. **`frontend/app.js`**: Handles user input, manages chat thread state, renders step cards, and synchronizes Leaflet map with **CartoDB Voyager Light** (vibrant high-contrast street map tiles), **OpenStreetMap**, and **Esri Satellite** layers, customized with CSJMU SVG/FontAwesome pins and glowing route polylines.
+## Summary of Changes
+1. **`graph.json`**:
+   - Recalculated `distance_m` for all 13 graph edges using exact Haversine formulas.
+   - Updated campus centroid to `(26.5025, 80.2683)`.
+2. **`landmarks.json`**:
+   - Synchronized all landmark coordinates with their respective `nearest_node` updated positions.
+3. **`frontend/js/app.js`**:
+   - Updated offline fallback landmark coordinates (`FALLBACK_LANDMARKS`) and initial Leaflet map view bounds.
+4. **Backend Services (`pathfinder.py` & `main.py`)**:
+   - Implemented Dijkstra pathfinder for optimal route calculation.
+   - Implemented FastAPI backend server endpoints (`/api/landmarks`, `/api/route`, `/api/landmarks/update`) with dynamic edge distance recalculation on position update.

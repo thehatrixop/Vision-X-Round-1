@@ -1,8 +1,8 @@
 {
   "university": "Chhatrapati Shahuji Maharaj University (CSJMU), Kanpur",
   "center": {
-    "lat": 26.4988,
-    "lon": 80.2690
+    "lat": 26.5025,
+    "lon": 80.2683
   },
   "nodes": [
     {
@@ -70,79 +70,79 @@
     {
       "source": "node_main_gate",
       "target": "node_admin_block",
-      "distance_m": 275.0,
+      "distance_m": 169.0,
       "path_type": "main_avenue"
     },
     {
       "source": "node_main_gate",
       "target": "node_sports_stadium",
-      "distance_m": 560.0,
+      "distance_m": 1123.0,
       "path_type": "outer_ring_road"
     },
     {
       "source": "node_admin_block",
       "target": "node_central_library",
-      "distance_m": 140.0,
+      "distance_m": 312.4,
       "path_type": "central_walkway"
     },
     {
       "source": "node_admin_block",
       "target": "node_auditorium",
-      "distance_m": 230.0,
+      "distance_m": 685.9,
       "path_type": "main_avenue"
     },
     {
       "source": "node_admin_block",
       "target": "node_pharmacy_dept",
-      "distance_m": 220.0,
+      "distance_m": 545.1,
       "path_type": "side_avenue"
     },
     {
       "source": "node_central_library",
       "target": "node_uiet",
-      "distance_m": 215.0,
+      "distance_m": 148.5,
       "path_type": "academic_pathway"
     },
     {
       "source": "node_central_library",
       "target": "node_canteen",
-      "distance_m": 165.0,
+      "distance_m": 454.4,
       "path_type": "central_walkway"
     },
     {
       "source": "node_uiet",
       "target": "node_incubation_center",
-      "distance_m": 145.0,
+      "distance_m": 449.6,
       "path_type": "academic_pathway"
     },
     {
       "source": "node_uiet",
       "target": "node_pharmacy_dept",
-      "distance_m": 110.0,
+      "distance_m": 342.3,
       "path_type": "academic_pathway"
     },
     {
       "source": "node_incubation_center",
       "target": "node_boys_hostel",
-      "distance_m": 160.0,
+      "distance_m": 1248.6,
       "path_type": "hostel_road"
     },
     {
       "source": "node_canteen",
       "target": "node_auditorium",
-      "distance_m": 155.0,
+      "distance_m": 633.1,
       "path_type": "side_avenue"
     },
     {
       "source": "node_canteen",
       "target": "node_boys_hostel",
-      "distance_m": 290.0,
+      "distance_m": 1010.4,
       "path_type": "hostel_road"
     },
     {
       "source": "node_auditorium",
       "target": "node_sports_stadium",
-      "distance_m": 185.0,
+      "distance_m": 346.7,
       "path_type": "sports_lane"
     }
   ]

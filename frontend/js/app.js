@@ -10,7 +10,6 @@ let pathGlowPolyline = null;
 let markersLayerGroup = null;
 let currentLocations = [];
 let landmarkMarkersMap = new Map();
-let isAdminCalibrating = false;
 
 // Available Map Tile Providers
 const TILE_STYLES = {
@@ -22,7 +21,7 @@ const TILE_STYLES = {
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     setupTileSwitcher();
-    setupAdminCalibration();
+    setupResizablePanels();
     fetchLocations();
 
     const findRouteBtn = document.getElementById('find-route-btn');
@@ -31,36 +30,128 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-/** Setup Admin Pin Drag & Drop Calibration Toggle */
-function setupAdminCalibration() {
-    const adminBtn = document.getElementById('admin-calibrate-btn');
-    if (!adminBtn) return;
+/** Setup Resizable Panels (Horizontal & Vertical Drag Adjustments) */
+function setupResizablePanels() {
+    const resizerV = document.getElementById('resizer-v');
+    const resizerH = document.getElementById('resizer-h');
+    const navPanel = document.getElementById('navigation-panel');
+    const controlBox = document.getElementById('control-box');
+    const workspace = document.getElementById('workspace');
 
-    adminBtn.addEventListener('click', () => {
-        isAdminCalibrating = !isAdminCalibrating;
+    // Restore saved panel sizes from localStorage
+    const savedNavWidth = localStorage.getItem('visionx_nav_width');
+    if (savedNavWidth && navPanel) {
+        navPanel.style.width = `${savedNavWidth}px`;
+    }
 
-        if (isAdminCalibrating) {
-            adminBtn.classList.add('admin-active');
-            adminBtn.innerHTML = '<i class="fa-solid fa-arrows-spin fa-spin"></i> Drag Pins to Calibrate Mode (ON)';
-            enableMarkerDragging(true);
-            alert('Admin Calibration Mode ON!\n\nYou can now drag any location pin on the map to place it on its exact entrance/building point. Dropping a pin automatically saves its new position!');
-        } else {
-            adminBtn.classList.remove('admin-active');
-            adminBtn.innerHTML = '<i class="fa-solid fa-up-down-left-right"></i> Admin Calibrate Pins';
-            enableMarkerDragging(false);
-        }
-    });
-}
+    const savedControlHeight = localStorage.getItem('visionx_control_height');
+    if (savedControlHeight && controlBox) {
+        controlBox.style.height = `${savedControlHeight}px`;
+        controlBox.style.flex = 'none';
+    }
 
-/** Enable or disable dragging on all landmark markers */
-function enableMarkerDragging(enable) {
-    landmarkMarkersMap.forEach(({ marker }) => {
-        if (enable) {
-            marker.dragging.enable();
-        } else {
-            marker.dragging.disable();
-        }
-    });
+    // Vertical Resizer (Left / Right Panel Width)
+    if (resizerV && navPanel && workspace) {
+        const startDragV = () => {
+            resizerV.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        };
+
+        const doDragV = (clientX) => {
+            const workspaceRect = workspace.getBoundingClientRect();
+            let newWidth = clientX - workspaceRect.left;
+            newWidth = Math.max(260, Math.min(newWidth, workspaceRect.width - 300));
+            navPanel.style.width = `${newWidth}px`;
+            localStorage.setItem('visionx_nav_width', newWidth);
+            if (map) map.invalidateSize();
+        };
+
+        const stopDragV = () => {
+            resizerV.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            if (map) map.invalidateSize();
+        };
+
+        resizerV.addEventListener('mousedown', (e) => {
+            startDragV();
+            const onMouseMove = (e) => doDragV(e.clientX);
+            const onMouseUp = () => {
+                stopDragV();
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // Touch support
+        resizerV.addEventListener('touchstart', (e) => {
+            startDragV();
+            const onTouchMove = (e) => {
+                if (e.touches.length > 0) doDragV(e.touches[0].clientX);
+            };
+            const onTouchEnd = () => {
+                stopDragV();
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+            };
+            document.addEventListener('touchmove', onTouchMove);
+            document.addEventListener('touchend', onTouchEnd);
+        });
+    }
+
+    // Horizontal Resizer (Control Box vs Messages Height)
+    if (resizerH && controlBox && navPanel) {
+        const startDragH = () => {
+            resizerH.classList.add('dragging');
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        };
+
+        const doDragH = (clientY) => {
+            const navRect = navPanel.getBoundingClientRect();
+            let newHeight = clientY - navRect.top;
+            newHeight = Math.max(140, Math.min(newHeight, navRect.height - 120));
+            controlBox.style.height = `${newHeight}px`;
+            controlBox.style.flex = 'none';
+            localStorage.setItem('visionx_control_height', newHeight);
+        };
+
+        const stopDragH = () => {
+            resizerH.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        resizerH.addEventListener('mousedown', (e) => {
+            startDragH();
+            const onMouseMove = (e) => doDragH(e.clientY);
+            const onMouseUp = () => {
+                stopDragH();
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // Touch support
+        resizerH.addEventListener('touchstart', (e) => {
+            startDragH();
+            const onTouchMove = (e) => {
+                if (e.touches.length > 0) doDragH(e.touches[0].clientY);
+            };
+            const onTouchEnd = () => {
+                stopDragH();
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+            };
+            document.addEventListener('touchmove', onTouchMove);
+            document.addEventListener('touchend', onTouchEnd);
+        });
+    }
 }
 
 /** Initialize Leaflet Map with CartoDB Voyager Vibrant Light Layer */
@@ -69,7 +160,7 @@ function initMap() {
     map = L.map('map', {
         zoomControl: true,
         attributionControl: false
-    }).setView([26.4990, 80.2700], 16);
+    }).setView([26.5025, 80.2683], 16);
 
     // Default Tile Layer: Voyager (Vibrant Light Map with crisp buildings & roads)
     tileLayer = L.tileLayer(TILE_STYLES.voyager, {
@@ -78,6 +169,7 @@ function initMap() {
     }).addTo(map);
 
     markersLayerGroup = L.layerGroup().addTo(map);
+    setTimeout(() => { if (map) map.invalidateSize(); }, 200);
 }
 
 /** Set up map tile style switcher buttons */
@@ -101,16 +193,16 @@ function setupTileSwitcher() {
 }
 
 const FALLBACK_LANDMARKS = [
-    { id: "lm_main_gate", name: "Main Entrance Gate No. 1 (GT Road)", category: "Gate", lat: 26.4962, lon: 80.2665, nearest_node: "node_main_gate", description: "Grand main entrance gate of CSJM University on Kalyanpur GT Road" },
-    { id: "lm_admin", name: "Administrative Building (VC Secretariat)", category: "Administrative", lat: 26.4981, lon: 80.2682, nearest_node: "node_admin_block", description: "Central administrative block housing Vice Chancellor Secretariat & Administrative offices" },
-    { id: "lm_library", name: "Central Library Building", category: "Library", lat: 26.4989, lon: 80.2693, nearest_node: "node_central_library", description: "Chhatrapati Shahuji Maharaj Central Library facing the central academic lawn" },
-    { id: "lm_uiet", name: "UIET Engineering & Technology Block", category: "Academic", lat: 26.5001, lon: 80.2676, nearest_node: "node_uiet", description: "University Institute of Engineering and Technology (UIET) building complex" },
-    { id: "lm_auditorium", name: "CSJMU Main Auditorium", category: "Event", lat: 26.4977, lon: 80.2704, nearest_node: "node_auditorium", description: "University Grand Jubilee Auditorium and Convocation Hall" },
+    { id: "lm_main_gate", name: "Main Entrance Gate No. 1 (GT Road)", category: "Gate", lat: 26.4969563933019, lon: 80.26674262346492, nearest_node: "node_main_gate", description: "Grand main entrance gate of CSJM University on Kalyanpur GT Road" },
+    { id: "lm_admin", name: "Administrative Building (VC Secretariat)", category: "Administrative", lat: 26.498399299314453, lon: 80.26620693886696, nearest_node: "node_admin_block", description: "Central administrative block housing Vice Chancellor Secretariat & Administrative offices" },
+    { id: "lm_library", name: "Central Library Building", category: "Library", lat: 26.50112015829331, lon: 80.26699407897705, nearest_node: "node_central_library", description: "Chhatrapati Shahuji Maharaj Central Library facing the central academic lawn" },
+    { id: "lm_uiet", name: "UIET Engineering & Technology Block", category: "Academic", lat: 26.50098417502509, lon: 80.26550809655177, nearest_node: "node_uiet", description: "University Institute of Engineering and Technology (UIET) building complex" },
+    { id: "lm_auditorium", name: "CSJMU Main Auditorium", category: "Event", lat: 26.504245233002063, lon: 80.26841753767731, nearest_node: "node_auditorium", description: "University Grand Jubilee Auditorium and Convocation Hall" },
     { id: "lm_canteen", name: "Central Canteen & Student Shopping Complex", category: "Dining", lat: 26.4990, lon: 80.2709, nearest_node: "node_canteen", description: "Central student canteen, food stalls, stationery, and bank ATMs" },
-    { id: "lm_incubation", name: "Incubation & Robotics Center", category: "Research", lat: 26.5006, lon: 80.2689, nearest_node: "node_incubation_center", description: "Chhatrapati Shahuji Maharaj Innovation Hub and Startup Incubation Center" },
-    { id: "lm_sports", name: "CSJMU Sports Stadium & Athletic Complex", category: "Sports", lat: 26.4969, lon: 80.2720, nearest_node: "node_sports_stadium", description: "University Sports Stadium, athletic track, and indoor sports hall" },
-    { id: "lm_hostel", name: "Shivaji Boys Hostel", category: "Residential", lat: 26.5016, lon: 80.2701, nearest_node: "node_boys_hostel", description: "Residential boys hostel block in the northern residential sector" },
-    { id: "lm_pharmacy", name: "Department of Pharmacy & Life Sciences", category: "Academic", lat: 26.4996, lon: 80.2667, nearest_node: "node_pharmacy_dept", description: "Department of Pharmaceutical Sciences and Life Sciences laboratories" }
+    { id: "lm_incubation", name: "Incubation & Robotics Center", category: "Research", lat: 26.497191329387295, lon: 80.2670811673868, nearest_node: "node_incubation_center", description: "Chhatrapati Shahuji Maharaj Innovation Hub and Startup Incubation Center" },
+    { id: "lm_sports", name: "CSJMU Sports Stadium & Athletic Complex", category: "Sports", lat: 26.506300783257753, lon: 80.27104071856068, nearest_node: "node_sports_stadium", description: "University Sports Stadium, athletic track, and indoor sports hall" },
+    { id: "lm_hostel", name: "Shivaji Boys Hostel", category: "Residential", lat: 26.50807044543542, lon: 80.27021508321725, nearest_node: "node_boys_hostel", description: "Residential boys hostel block in the northern residential sector" },
+    { id: "lm_pharmacy", name: "Department of Pharmacy & Life Sciences", category: "Academic", lat: 26.502998352775094, lon: 80.26811329168027, nearest_node: "node_pharmacy_dept", description: "Department of Pharmaceutical Sciences and Life Sciences laboratories" }
 ];
 
 /** Fetch CSJMU locations from FastAPI endpoint */
@@ -198,52 +290,15 @@ function renderMapLandmarks(landmarks) {
         });
 
         const marker = L.marker([lm.lat, lm.lon], { 
-            icon: pinIcon,
-            draggable: isAdminCalibrating 
+            icon: pinIcon
         });
 
         marker.bindPopup(`
             <div style="font-family:sans-serif; padding:4px;">
                 <h4 style="margin:0 0 4px 0; color:#f59e0b; font-size:14px;"><i class="${iconSymbol}"></i> ${lm.name}</h4>
-                <p style="margin:0 0 6px 0; font-size:12px; color:#d1d5db;">${lm.description}</p>
-                <small style="color:#6366f1;">Drag pin to calibrate position</small>
+                <p style="margin:0 0 4px 0; font-size:12px; color:#d1d5db;">${lm.description}</p>
             </div>
         `);
-
-        // Dragend handler to update backend coordinates
-        marker.on('dragend', async (event) => {
-            const newPos = event.target.getLatLng();
-            const landmarkId = lm.id;
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/landmarks/update`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: landmarkId,
-                        lat: newPos.lat,
-                        lon: newPos.lng
-                    })
-                });
-
-                const resData = await res.json();
-                if (res.ok) {
-                    marker.getPopup().setContent(`
-                        <div style="font-family:sans-serif; padding:4px;">
-                            <h4 style="margin:0 0 4px 0; color:#10b981; font-size:14px;"><i class="fa-solid fa-check"></i> Calibrated & Saved!</h4>
-                            <p style="margin:0; font-size:12px; color:#ffffff;"><b>${lm.name}</b></p>
-                            <small style="color:#9ca3af;">Lat: ${newPos.lat.toFixed(6)}, Lon: ${newPos.lng.toFixed(6)}</small>
-                        </div>
-                    `);
-                    marker.openPopup();
-                } else {
-                    alert('Error saving position: ' + resData.detail);
-                }
-            } catch (err) {
-                console.error('[Vision X] Error saving landmark pin:', err);
-                alert('Could not save landmark pin position to backend server.');
-            }
-        });
 
         marker.addTo(markersLayerGroup);
         landmarkMarkersMap.set(lm.id, { marker, data: lm });
@@ -267,7 +322,6 @@ function getCategoryIcon(category) {
 
 /** Handle route calculation button click */
 async function handleFindRoute() {
-    const useAi = document.getElementById('ai-toggle').checked;
     const btn = document.getElementById('find-route-btn');
     
     const startNode = document.getElementById('start-location').value;
@@ -286,8 +340,7 @@ async function handleFindRoute() {
     const endpoint = `${API_BASE_URL}/api/route`;
     const payload = {
         start_node: startNode,
-        end_node: endNode,
-        use_ai_refinement: useAi
+        end_node: endNode
     };
 
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculating CSJMU Path...';

@@ -1,197 +1,159 @@
+import json
+import math
 import os
-import sys
-from typing import Optional, List
+from typing import Optional
 from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from dotenv import load_dotenv
 
-# Ensure root directory is included in sys.path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(BASE_DIR)
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
+from services.pathfinder import PathfinderService
+from services.landmark_matcher import LandmarkMatcherService
+from services.instruction_builder import InstructionBuilderService
 
-# Load environment variables (.env file if available)
-load_dotenv()
-
-try:
-    from backend.services.pathfinder import PathfinderService
-    from backend.services.landmark_matcher import LandmarkMatcherService
-    from backend.services.instruction_builder import InstructionBuilderService
-except ModuleNotFoundError:
-    from services.pathfinder import PathfinderService
-    from services.landmark_matcher import LandmarkMatcherService
-    from services.instruction_builder import InstructionBuilderService
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(
-    title="Vision X — Landmark Navigation API",
-    description="Message-based route calculation with landmark snapping and turn maneuver classification.",
-    version="1.0.0"
+    title="Vision X — CSJMU Campus Landmark Navigation API",
+    version="1.0.0",
+    description="Backend spatial routing engine providing landmark-based conversational directions."
 )
 
-# Enable CORS for local web development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize Services
-try:
-    pathfinder = PathfinderService()
-    landmark_matcher = LandmarkMatcherService()
-    instruction_builder = InstructionBuilderService()
-except Exception as e:
-    print(f"[Main Setup Error]: {e}")
+frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+if os.path.exists(frontend_dir):
+    app.mount("/app", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
+
+pathfinder = PathfinderService()
+landmark_matcher = LandmarkMatcherService()
+instruction_builder = InstructionBuilderService()
 
 class RouteRequest(BaseModel):
     start_node: str
     end_node: str
-    use_ai_refinement: Optional[bool] = True
 
-class RouteResponse(BaseModel):
-    status: str
-    total_distance_m: float
-    path_nodes: List[str]
-    coordinates: List[List[float]]
-    messages: List[dict]
-    routing_engine: Optional[str] = "OpenRouteService"
-
-@app.get("/")
-def root():
-    return {
-        "service": "Vision X Landmark Navigation API",
-        "status": "online",
-        "endpoints": {
-            "landmarks": "/api/landmarks",
-            "route": "/api/route"
-        }
-    }
-
-@app.get("/api/landmarks")
-def get_landmarks():
-    """Returns available CSJMU navigation locations and landmarks for selection UI."""
-    try:
-        pathfinder.load_graph()
-        landmark_matcher.load_landmarks()
-        nodes = [{"id": n["id"], "name": n["name"], "lat": n["lat"], "lon": n["lon"]} for n in pathfinder.nodes_data.values()]
-        landmarks = landmark_matcher.landmarks
-        return {
-            "status": "success",
-            "locations": nodes,
-            "landmarks": landmarks
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-class UpdateLandmarkRequest(BaseModel):
+class LandmarkUpdateRequest(BaseModel):
     id: str
     lat: float
     lon: float
 
+def calculate_haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates Haversine distance in meters between two lat/lon points."""
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2.0)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0)**2
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return round(6371000.0 * c, 1)
+
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "service": "Vision X Navigation API",
+        "university": "CSJMU Kanpur"
+    }
+
+@app.get("/api/landmarks")
+def get_landmarks():
+    """Returns CSJMU campus node locations and landmarks dataset."""
+    locations = [
+        {
+            "id": node_id,
+            "name": node["name"],
+            "category": next((lm["category"] for lm in landmark_matcher.landmarks if lm.get("nearest_node") == node_id), "Node"),
+            "lat": node["lat"],
+            "lon": node["lon"]
+        }
+        for node_id, node in pathfinder.nodes.items()
+    ]
+    return {
+        "status": "success",
+        "locations": locations,
+        "landmarks": landmark_matcher.landmarks
+    }
+
+@app.post("/api/route")
+def calculate_route(req: RouteRequest):
+    """Calculates shortest path and generates conversational landmark instructions."""
+    route = pathfinder.find_shortest_path(req.start_node, req.end_node)
+    if not route:
+        raise HTTPException(status_code=404, detail="No valid path found between selected locations.")
+
+    maneuver_steps = landmark_matcher.process_path_maneuvers(route["path_details"])
+    messages = instruction_builder.generate_messages(maneuver_steps)
+
+    return {
+        "status": "success",
+        "routing_engine": "Vision-X Campus Graph (Dijkstra)",
+        "total_distance_m": route["total_distance_m"],
+        "coordinates": route["coordinates"],
+        "messages": messages
+    }
+
 @app.post("/api/landmarks/update")
-def update_landmark_coordinates(request: UpdateLandmarkRequest):
-    """
-    Admin Calibration Endpoint: Updates latitude and longitude coordinates for a location
-    in graph.json and landmarks.json datasets permanently.
-    """
-    import json
-    
+def update_landmark_position(req: LandmarkUpdateRequest):
+    """Updates landmark pin position and recalculates graph edge distances."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
     graph_path = os.path.join(base_dir, "data", "graph.json")
     landmarks_path = os.path.join(base_dir, "data", "landmarks.json")
-    
-    updated_graph = False
-    updated_landmarks = False
-    
-    # 1. Update graph.json node
-    if os.path.exists(graph_path):
-        with open(graph_path, "r", encoding="utf-8") as f:
-            graph_data = json.load(f)
-            
-        for node in graph_data.get("nodes", []):
-            if node["id"] == request.id or node["id"].replace("node_", "lm_") == request.id or request.id.replace("lm_", "node_") == node["id"]:
-                node["lat"] = round(request.lat, 6)
-                node["lon"] = round(request.lon, 6)
-                updated_graph = True
-                break
-                
-        if updated_graph:
-            with open(graph_path, "w", encoding="utf-8") as f:
-                json.dump(graph_data, f, indent=2)
-                
-    # 2. Update landmarks.json POI
+
+    # 1. Update landmarks.json
     if os.path.exists(landmarks_path):
         with open(landmarks_path, "r", encoding="utf-8") as f:
             lm_data = json.load(f)
-            
+
+        updated = False
+        target_node_id = None
         for lm in lm_data.get("landmarks", []):
-            if lm["id"] == request.id or lm["nearest_node"] == request.id:
-                lm["lat"] = round(request.lat, 6)
-                lm["lon"] = round(request.lon, 6)
-                updated_landmarks = True
+            if lm["id"] == req.id or lm.get("nearest_node") == req.id:
+                lm["lat"] = req.lat
+                lm["lon"] = req.lon
+                target_node_id = lm.get("nearest_node", req.id)
+                updated = True
                 break
-                
-        if updated_landmarks:
+
+        if updated:
             with open(landmarks_path, "w", encoding="utf-8") as f:
                 json.dump(lm_data, f, indent=2)
-                
-    # Refresh in-memory services
+
+    # 2. Update graph.json
+    if os.path.exists(graph_path):
+        with open(graph_path, "r", encoding="utf-8") as f:
+            g_data = json.load(f)
+
+        target_node = req.id if req.id in [n["id"] for n in g_data.get("nodes", [])] else target_node_id
+
+        for node in g_data.get("nodes", []):
+            if node["id"] == target_node:
+                node["lat"] = req.lat
+                node["lon"] = req.lon
+                break
+
+        node_dict = {n["id"]: n for n in g_data.get("nodes", [])}
+
+        # Recalculate edge distances
+        for edge in g_data.get("edges", []):
+            s_node = node_dict.get(edge["source"])
+            t_node = node_dict.get(edge["target"])
+            if s_node and t_node:
+                edge["distance_m"] = calculate_haversine(
+                    s_node["lat"], s_node["lon"],
+                    t_node["lat"], t_node["lon"]
+                )
+
+        with open(graph_path, "w", encoding="utf-8") as f:
+            json.dump(g_data, f, indent=2)
+
+    # Reload services
     pathfinder.load_graph()
     landmark_matcher.load_landmarks()
-    
-    return {
-        "status": "success",
-        "message": f"Successfully updated coordinates for {request.id}",
-        "new_coords": {"lat": request.lat, "lon": request.lon}
-    }
 
-@app.post("/api/route", response_model=RouteResponse)
-def calculate_route(request: RouteRequest):
-    """
-    Computes shortest path, matches nearby landmarks at turns, and generates message-based instructions.
-    """
-    if request.start_node == request.end_node:
-        raise HTTPException(status_code=400, detail="Start and final location cannot be identical.")
-        
-    try:
-        # Refresh datasets
-        pathfinder.load_graph()
-        landmark_matcher.load_landmarks()
-        
-        # 1. Compute shortest path by node IDs
-        path_result = pathfinder.get_shortest_path(request.start_node, request.end_node)
-        
-        # 2. Match maneuvers & landmarks
-        maneuver_steps = landmark_matcher.process_path_maneuvers(path_result["path_details"])
-        
-        # 3. Generate human conversational instructions
-        messages = instruction_builder.generate_messages(maneuver_steps, use_ai=request.use_ai_refinement)
-        
-        return {
-            "status": "success",
-            "total_distance_m": path_result["total_distance_m"],
-            "path_nodes": path_result["path_nodes"],
-            "coordinates": path_result["coordinates"],
-            "messages": messages,
-            "routing_engine": path_result.get("routing_engine", "OpenRouteService")
-        }
-    except ValueError as ve:
-        raise HTTPException(status_code=404, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal route processing error: {str(e)}")
-
-# Mount static frontend files if directory exists
-FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
-if os.path.exists(FRONTEND_DIR):
-    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
+    return {"status": "success", "message": "Position and edge distances updated successfully."}
